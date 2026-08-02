@@ -1,4 +1,5 @@
 const Task = require('../models/Task');
+const { validateAssignedEmployees } = require('../utils/taskAssignmentValidation');
 
 const POPULATE_FIELDS = [
   { path: 'assignedEmployees', select: 'name employeeId speciality' },
@@ -26,11 +27,18 @@ async function createTask(req, res, next) {
       });
     }
 
+    let normalizedAssignedEmployees = [];
+    try {
+      normalizedAssignedEmployees = validateAssignedEmployees(assignedEmployees, numEmployees);
+    } catch (err) {
+      return res.status(400).json({ message: err.message });
+    }
+
     const task = await Task.create({
       taskType,
       numEmployees,
       description,
-      assignedEmployees: assignedEmployees || [],
+      assignedEmployees: normalizedAssignedEmployees,
       client,
       startDate,
       endDate,
@@ -122,6 +130,17 @@ async function updateTask(req, res, next) {
 
     if (req.user.role !== 'admin' && !isAssigned) {
       return res.status(403).json({ message: 'You are not assigned to this task' });
+    }
+
+    if (updates.assignedEmployees !== undefined || updates.numEmployees !== undefined) {
+      try {
+        const nextAssignedEmployees = updates.assignedEmployees ?? task.assignedEmployees;
+        const nextNumEmployees = updates.numEmployees ?? task.numEmployees;
+
+        updates.assignedEmployees = validateAssignedEmployees(nextAssignedEmployees, nextNumEmployees);
+      } catch (err) {
+        return res.status(400).json({ message: err.message });
+      }
     }
 
     const updatedTask = await Task.findByIdAndUpdate(req.params.id, updates, {
