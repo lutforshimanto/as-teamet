@@ -17,6 +17,16 @@ async function getUsers(req, res, next) {
   }
 }
 
+// GET /api/users/directory  (any logged-in user — minimal public-safe fields)
+async function getUserDirectory(req, res, next) {
+  try {
+    const users = await User.find().select('name employeeId _id');
+    res.json(users);
+  } catch (err) {
+    next(err);
+  }
+}
+
 // GET /api/users/me  (any logged-in user)
 async function getMe(req, res, next) {
   res.json(req.user);
@@ -88,4 +98,4 @@ async function deleteUser(req, res, next) {
   }
 }
 
-module.exports = { getUsers, getMe, getUserById, updateMe, updateUser, deleteUser };
+module.exports = { getUsers, getMe, getUserById, updateMe, updateUser, deleteUser, getUserDirectory };
