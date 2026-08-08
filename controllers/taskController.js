@@ -59,20 +59,50 @@ async function createTask(req, res, next) {
 //   ?startDate=2026-07-01&endDate=2026-07-15  -> all tasks overlapping that range
 //   ?status=pending
 //   ?mine=true                         -> only tasks assigned to the logged-in user
+// async function getTasks(req, res, next) {
+//   try {
+//     const { month, startDate, endDate, status, mine } = req.query;
+//     const filter = {};
+
+//     if (month) {
+//       // "2026-07" -> covers the whole month of July 2026
+//       const [year, m] = month.split('-').map(Number);
+//       if (!year || !m) {
+//         return res.status(400).json({ message: 'month must be in YYYY-MM format' });
+//       }
+//       const rangeStart = new Date(Date.UTC(year, m - 1, 1));
+//       const rangeEnd = new Date(Date.UTC(year, m, 1)); // first day of next month
+//       // A task is "in" the month if it overlaps the range at all
+//       filter.startDate = { $lt: rangeEnd };
+//       filter.endDate = { $gte: rangeStart };
+//     } else if (startDate || endDate) {
+//       const rangeStart = startDate ? new Date(startDate) : new Date('1970-01-01');
+//       const rangeEnd = endDate ? new Date(endDate) : new Date('2999-12-31');
+//       filter.startDate = { $lte: rangeEnd };
+//       filter.endDate = { $gte: rangeStart };
+//     }
+
+//     if (status) filter.status = status;
+//     if (mine === 'true') filter.assignedEmployees = req.user._id;
+
+//     const tasks = await Task.find(filter).populate(POPULATE_FIELDS).sort({ startDate: 1 });
+//     res.json(tasks);
+//   } catch (err) {
+//     next(err);
+//   }
+// }
 async function getTasks(req, res, next) {
   try {
     const { month, startDate, endDate, status, mine } = req.query;
     const filter = {};
 
     if (month) {
-      // "2026-07" -> covers the whole month of July 2026
       const [year, m] = month.split('-').map(Number);
       if (!year || !m) {
         return res.status(400).json({ message: 'month must be in YYYY-MM format' });
       }
       const rangeStart = new Date(Date.UTC(year, m - 1, 1));
-      const rangeEnd = new Date(Date.UTC(year, m, 1)); // first day of next month
-      // A task is "in" the month if it overlaps the range at all
+      const rangeEnd = new Date(Date.UTC(year, m, 1));
       filter.startDate = { $lt: rangeEnd };
       filter.endDate = { $gte: rangeStart };
     } else if (startDate || endDate) {
@@ -83,7 +113,15 @@ async function getTasks(req, res, next) {
     }
 
     if (status) filter.status = status;
-    if (mine === 'true') filter.assignedEmployees = req.user._id;
+
+    // Employees only ever see tasks they're assigned to — enforced here,
+    // not left to the client, so it can't be bypassed by omitting `mine`.
+    if (req.user.role !== 'admin') {
+      filter.assignedEmployees = req.user._id;
+    } else if (mine === 'true') {
+      // Admins can still opt in to "just my assigned tasks".
+      filter.assignedEmployees = req.user._id;
+    }
 
     const tasks = await Task.find(filter).populate(POPULATE_FIELDS).sort({ startDate: 1 });
     res.json(tasks);
@@ -93,10 +131,29 @@ async function getTasks(req, res, next) {
 }
 
 // GET /api/tasks/:id
+// async function getTaskById(req, res, next) {
+//   try {
+//     const task = await Task.findById(req.params.id).populate(POPULATE_FIELDS);
+//     if (!task) return res.status(404).json({ message: 'Task not found' });
+//     res.json(task);
+//   } catch (err) {
+//     next(err);
+//   }
+// }
+
 async function getTaskById(req, res, next) {
   try {
     const task = await Task.findById(req.params.id).populate(POPULATE_FIELDS);
     if (!task) return res.status(404).json({ message: 'Task not found' });
+
+    const isAssigned = task.assignedEmployees.some(
+      (emp) => (emp._id ? emp._id.toString() : emp.toString()) === req.user._id.toString()
+    );
+
+    if (req.user.role !== 'admin' && !isAssigned) {
+      return res.status(403).json({ message: 'You are not assigned to this task' });
+    }
+
     res.json(task);
   } catch (err) {
     next(err);
