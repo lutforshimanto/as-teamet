@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, trim: true },
     role: { type: String, enum: ['admin', 'employee'], default: 'employee' },
     speciality: { type: String, trim: true },
+    imageUrl: { type: String, trim: true },
     password: { type: String, select: false },
   },
   { timestamps: true }

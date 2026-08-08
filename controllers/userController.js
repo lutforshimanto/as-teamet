@@ -20,7 +20,7 @@ async function getUsers(req, res, next) {
 // GET /api/users/directory  (any logged-in user — minimal public-safe fields)
 async function getUserDirectory(req, res, next) {
   try {
-    const users = await User.find().select('name employeeId _id');
+    const users = await User.find().select('name employeeId imageUrl _id');
     res.json(users);
   } catch (err) {
     next(err);
@@ -48,7 +48,7 @@ async function getUserById(req, res, next) {
 // or change their own employeeId through this route.
 async function updateMe(req, res, next) {
   try {
-    const allowedFields = ['name', 'address', 'phone', 'speciality', 'password'];
+    const allowedFields = ['name', 'address', 'phone', 'speciality', 'password', 'imageUrl'];
     const updates = {};
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
@@ -68,7 +68,7 @@ async function updateMe(req, res, next) {
 // PATCH /api/users/:id  (admin only — can edit any user, including role)
 async function updateUser(req, res, next) {
   try {
-    const allowedFields = ['name', 'address', 'phone', 'speciality', 'role', 'employeeId', 'password'];
+    const allowedFields = ['name', 'address', 'phone', 'speciality', 'role', 'employeeId', 'password', 'imageUrl'];
     const updates = {};
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) updates[field] = req.body[field];

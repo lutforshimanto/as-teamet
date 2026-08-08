@@ -38,6 +38,7 @@ async function login(req, res, next) {
         employeeId: user.employeeId,
         role: user.role,
         speciality: user.speciality,
+        imageUrl: user.imageUrl,
       },
     });
   } catch (err) {
@@ -54,7 +55,7 @@ async function login(req, res, next) {
 // initial password directly by including it in this request.
 async function signup(req, res, next) {
   try {
-    const { name, employeeId, address, phone, role, speciality, password } = req.body;
+    const { name, employeeId, address, phone, role, speciality, password, imageUrl } = req.body;
 
     if (!name || !employeeId) {
       return res.status(400).json({ message: 'name and employeeId are required' });
@@ -70,9 +71,10 @@ async function signup(req, res, next) {
       employeeId,
       address,
       phone,
-      role: role === 'admin' ? 'admin' : 'employee', // never trust client to self-promote
+      role: role === 'admin' ? 'admin' : 'employee',
       speciality,
-      password, // may be undefined — that's fine, see model
+      imageUrl,
+      password,
     });
 
     res.status(201).json({
@@ -80,6 +82,7 @@ async function signup(req, res, next) {
       name: user.name,
       employeeId: user.employeeId,
       role: user.role,
+      imageUrl: user.imageUrl,
       activated: !!password,
     });
   } catch (err) {
@@ -128,6 +131,7 @@ async function register(req, res, next) {
         employeeId: user.employeeId,
         role: user.role,
         speciality: user.speciality,
+        imageUrl: user.imageUrl,
       },
     });
   } catch (err) {
